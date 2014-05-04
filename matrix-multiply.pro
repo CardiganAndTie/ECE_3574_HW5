@@ -9,3 +9,6 @@ INCLUDEPATH += .
 
 # Input
 SOURCES += main.cpp
+
+HEADERS += \
+    Matrix.h
