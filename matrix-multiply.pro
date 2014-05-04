@@ -11,4 +11,5 @@ INCLUDEPATH += .
 SOURCES += main.cpp
 
 HEADERS += \
-    Matrix.h
+    Matrix.h \
+    MatrixException.h

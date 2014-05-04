@@ -47,8 +47,6 @@ int main(int argc, char *argv[])
 
     qDebug() << "hello";
 
-    //Matrix* pMat = &matrixA;
-
 
     matrix_args argsA;
     argsA.pMat = matrixA;

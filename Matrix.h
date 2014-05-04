@@ -7,45 +7,119 @@
 #include <QStringList>
 #include <QTextStream>
 #include <QList>
+#include "MatrixException.h"
 
+template <typename T>
 class Matrix{
 private:
-    QVector<QVector<int> > col;
+    QVector<QVector<T> > col;
     int row_size;
     int col_size;
+
+    bool checkValidMatrix();
+
 public:
-    int at(int column, int row);
+    Matrix();
+    Matrix(int column = 0, int row = 0);
+    T at(int column, int row);
     int getRowSize();
     int getColSize();
+    void replaceVal(int column, int row, T newVal);
 
-    bool makeMatrix(QString fileName);
+    void makeMatrix(QString fileName);
+    //void makeEmptyMatrix(int column, int row);
 };
 
+//////////////////////////////
+//PRIVATE MEMBER FUNCTIONS
+/////////////////////////////
+template <typename T>
+bool Matrix<T>::checkValidMatrix()
+{
+    this->col_size = this->col.size();
 
-int Matrix::at(int column, int row)
+    for(int i = 0; i < getColSize()-1; i++)
+    {
+        if(this->col.at(i).size() != this->col.at(i+1).size())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+////////////////////////////
+//PUBLIC MEMBER FUNCTIONS
+///////////////////////////
+template <typename T>
+Matrix<T>::Matrix()
+{
+    row_size = 0;
+    col_size = 0;
+}
+
+template <typename T>
+Matrix<T>::Matrix(int column, int row)
+{
+    for(int i = 0; i < column; i++)
+    {
+        QVector<T> newRow;
+        for(int j = 0; j < row; j++)
+        {
+            newRow.append(0);
+        }
+        this->col.append(newRow);
+    }
+    row_size = row;
+    col_size = column;
+}
+
+//Access function
+template <typename T>
+T Matrix<T>::at(int column, int row)
 {
     return this->col.at(column).at(row);
 }
 
-int Matrix::getColSize()
+//returns # of columns
+template <typename T>
+int Matrix<T>::getColSize()
 {
     return col_size;
 }
 
-int Matrix::getRowSize()
+//returns # of rows
+template <typename T>
+int Matrix<T>::getRowSize()
 {
     return row_size;
 }
 
+//replaces a value in the matrix
+template <typename T>
+void Matrix<T>::replaceVal(int column, int row, T newVal)
+{
+    QVector<T> newColumn = this->col.at(column);
+    newColumn.replace(row, newVal);
+    this->col.replace(column,newColumn);
+}
 
-bool Matrix::makeMatrix(QString fileName)
+//creates a matrix from a file
+template <typename T>
+void Matrix<T>::makeMatrix(QString fileName)
 {
     QFile input(fileName);
-    if(!input.open(QIODevice::ReadOnly))
-    {
-        qDebug() << "Could not open file.";
-        return false;
+    try{
+        if(!input.open(QIODevice::ReadOnly))
+        {
+            badFile.raise();
+        }
     }
+    catch(fileError &badFile)
+    {
+        qFatal("Could not open file.");
+    }
+
     QTextStream stream(&input);
 
 
@@ -54,20 +128,36 @@ bool Matrix::makeMatrix(QString fileName)
     {
         QString line = stream.readLine();   //extract the line into "line"
         QStringList temp = line.split(" ");
-        QVector<int> row;
+        QVector<T> row;
         for(int i = 0; i < temp.size(); i++)
         {
-            row.append(temp.at(i).toInt());
+            T item = temp.at(i).toDouble();
+            item = (T)item;
+            row.append(item);
         }
         this->col.append(row);
 
-
-
     }
     input.close();
-    this->col_size = this->col.size();
+
+    try
+    {
+        if(!this->checkValidMatrix())
+        {
+            invMat.raise();
+        }
+    }
+    catch(invalidMatrix &invMat)
+    {
+        qFatal("Bad matrix.");
+    }
+
     this->row_size = this->col.at(0).size();
-    return true;
 }
+
+//void Matrix<T>::makeEmptyMatrix(int column, int row)
+//{
+
+//}
 
 #endif // MATRIX_H
