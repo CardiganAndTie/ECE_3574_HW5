@@ -12,4 +12,5 @@ SOURCES += main.cpp
 
 HEADERS += \
     Matrix.h \
-    MatrixException.h
+    MatrixException.h \
+    ThreadException.h

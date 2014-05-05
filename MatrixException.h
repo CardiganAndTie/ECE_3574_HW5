@@ -23,45 +23,16 @@ public:
     void raise() const {qDebug() << "Exception: "; throw *this; }
 };
 
+class cannotMultiply : public QtConcurrent::Exception
+{
+public:
+    void raise() const {qDebug() << "Exception: "; throw *this; }
+};
+
 invalidMatrix invMat;   //Exceptions for invalid matrix
 fileError badFile;      //Exceptions for unable to open file
 argError badArgNum;     //Exceptions for incorrect number of arguments
-/*
-class nonExistentDir : public QtConcurrent::Exception
-{
-public:
-    void raise() const {qDebug() << "Exception: "; throw *this; }
-};
+cannotMultiply wrongDim;//Exceptions for incorrect dimensions for multiplication
 
-class invalidCommand : public QtConcurrent::Exception
-{
-public:
-    void raise() const {qDebug() << "Exception: "; throw *this; }
-};
-
-class noCommand : public QtConcurrent::Exception
-{
-public:
-    void raise() const {qDebug() << "Exception: "; throw *this; }
-};
-
-class repeatedArgument : public QtConcurrent::Exception
-{
-public:
-    void raise() const {qDebug() << "Exception: "; throw *this; }
-};
-
-class repeatedSizeArgument : public QtConcurrent::Exception
-{
-public:
-    void raise() const {qDebug() << "Exception: "; throw *this; }
-};
-
-nonExistentDir noDir;           //Exceptions for non existent directory
-invalidCommand invCmd;          //...        for invalid command
-noCommand noCmd;                //...        for no directory name argument
-repeatedArgument repArg;        //...        for repeated traversal argument
-repeatedSizeArgument repSzArg;  //...        for repeated size arguments
-*/
 
 #endif // MATRIXEXCEPTION_H
