@@ -7,9 +7,10 @@
 #include <QStringList>
 #include <QTextStream>
 #include <QList>
+#include <QVector>
 
 #include "Matrix.h"
-//#include "MatrixException.h"
+#include "ThreadException.h"
 
 
 struct matrix_args
@@ -17,98 +18,184 @@ struct matrix_args
     Matrix<float>* pMat;
     QString fileName;
 };
-/////////////////////////////
+
+struct product_args
+{
+    Matrix<float>* pMatA;
+    Matrix<float>* pMatB;
+    Matrix<float>* pMatC;
+};
+
+struct calc_args
+{
+    int col;
+    int row;
+};
+
+////////////////////////////////////////////////
 //GLOBAL VARIABLES
-//////////////////////////
+////////////////////////////////////////////////
 Matrix<float>* matrixA = new Matrix<float>(0,0);
 Matrix<float>* matrixB = new Matrix<float>(0,0);
 Matrix<float>* matrixC = new Matrix<float>(0,0);
-//////////////////////////
+pthread_mutex_t mutexCalc = PTHREAD_MUTEX_INITIALIZER;
+////////////////////////////////////////////////
 
+//Fills a matrix from a file
 void *createMatrix(void *args)
 {
     matrix_args* matArgs;
     matArgs = (matrix_args*) args;
-
     matArgs->pMat->makeMatrix(matArgs->fileName);
 
 
     pthread_exit(NULL);
 }
 
+//Prepares matrix C, the product, with the correct number of rows and columns
+void *prepareProduct(void *args)
+{
+    try
+    {
+        if(matrixA->getColNum() != matrixB->getRowNum())
+            wrongDim.raise();
+    }
+    catch(cannotMultiply &wrongDim)
+    {
+        qFatal("Matrix A's number of columns must equal matrix B's number of rows.");
+    }
 
+    int pRows = matrixA->getRowNum();
+    int pCols = matrixB->getColNum();
+    matrixC->changeDimensions(pCols,pRows);
 
+    pthread_exit(NULL);
+}
+
+//Calculates a specififed element in matrix C
+void *calculateProductElement(void *args)
+{
+    calc_args* matArgs;
+    matArgs = (calc_args*) args;
+    float result = 0;
+
+    for(int i = 0; i < matrixA->getColNum(); i++)
+    {
+        result += matrixA->at(i,matArgs->row) * matrixB->at(matArgs->col,i);
+    }
+
+    pthread_mutex_lock(&mutexCalc);
+
+    matrixC->replaceVal(matArgs->col,matArgs->row,result);
+
+    pthread_mutex_unlock(&mutexCalc);
+
+    pthread_exit(NULL);
+}
 
 
 int main(int argc, char *argv[])
 {
-    int rc1 = 0;
-    int rc2 = 0;
+    try{
+        if(argc != 4)
+        {
+            badArgNum.raise();
+        }
+    }
+    catch(argError &badArgNum)
+    {
+        qFatal("Error: Need three filenames");
+    }
+    QString fileA = (QString) argv[1];
+    QString fileB = (QString) argv[2];
+    QString fileC = (QString) argv[3];
 
-    qDebug() << "hello";
-
-
+//Fill matrix A and B
+    //prepare arguments
     matrix_args argsA;
     argsA.pMat = matrixA;
-    argsA.fileName = "matrix_file1.dat";
+    argsA.fileName = fileA;
 
     matrix_args argsB;
     argsB.pMat = matrixB;
-    argsB.fileName = "matrix_file2.dat";
+    argsB.fileName = fileB;
 
-    pthread_t thread1;
-    pthread_t thread2;
-    rc1 = pthread_create(&thread1, NULL, createMatrix, (void*) &argsA);
-    if (rc1)
+    pthread_t threadCreateA;
+    pthread_t threadCreateB;
+    try{
+        if (pthread_create(&threadCreateA, NULL, createMatrix, (void*) &argsA))
+        {
+            badCreate.raise();
+        }
+
+        if (pthread_create(&threadCreateB, NULL, createMatrix, (void*) &argsB))
+        {
+             badCreate.raise();
+        }
+    }
+    catch(threadCreationFail &badCreate)
     {
-         qDebug() << "ERROR; return code from pthread_create() is " << rc1;
-         exit(-1);
+        qFatal("Could not create thread.");
     }
 
-    rc2 = pthread_create(&thread2, NULL, createMatrix, (void*) &argsB);
-    if (rc2)
+    pthread_join(threadCreateA, NULL);
+
+    pthread_join(threadCreateB,NULL);
+//Matrix A and B made
+
+
+    //Start making the product
+    pthread_t threadProductMake;
+
+    try{
+        if(pthread_create(&threadProductMake, NULL, prepareProduct, NULL))
+        {
+            badCreate.raise();
+        }
+    }
+    catch(threadCreationFail &badCreate)
     {
-         qDebug() << "ERROR; return code from pthread_create() is " << rc2;
-         exit(-1);
+        qFatal("Could not create product thread.");
     }
 
-    pthread_join(thread1, NULL);
+    pthread_join(threadProductMake, NULL);
 
-    pthread_join(thread2,NULL);
-    qDebug() << "exited";
-
-
+    //find number of elements in the product matrix;
+    int elementNum = matrixA->getRowNum()*matrixB->getColNum();
 
 
-//    QString rowRead;
+    QVector<pthread_t> threadProductCalc(elementNum);   //create a vector of threads w/ size of number of product elements
+    QVector<calc_args> argVector(elementNum);           //create a vector of arguments w/ the size of the number of product elements
 
-//    for(int i = 0; i < argsA.pMat->getColSize(); i++)
-//    {
-//        for(int j = 0; j < argsA.pMat->getRowSize(); j++)
-//        {
-//            rowRead.append( QString::number(argsA.pMat->at(i,j) ));
-//            rowRead.append(" ");
-//        }
-//        rowRead.append("\n");
-//    }
+    int threadInd = 0;  //tracks which thread currently dealing with
+    for(int i = 0; i < matrixC->getColNum(); i++)
+    {
+        for(int j = 0; j < matrixC->getRowNum(); j++)
+        {
+            argVector[threadInd].col = i;
+            argVector[threadInd].row = j;
+            pthread_create(&threadProductCalc[threadInd], NULL, calculateProductElement, &argVector[threadInd]);
+            try{
+                if(pthread_create(&threadProductCalc[threadInd], NULL, calculateProductElement, &argVector[threadInd]))
+                {
+                    badCreate.raise();
+                }
+            }
+            catch(threadCreationFail &badCreate)
+            {
+                qFatal("Could not create calculation thread of element %d", threadInd);
+            }
+            threadInd++;
+        }
+    }
 
-//    qDebug() << rowRead;
 
+    for(threadInd = 0; threadInd < elementNum; threadInd++)
+    {
+        pthread_join(threadProductCalc[threadInd], NULL);
+    }
 
-
-//    QString rowRead2;
-
-//    for(int i = 0; i < argsB.pMat->getColSize(); i++)
-//    {
-//        for(int j = 0; j < argsB.pMat->getRowSize(); j++)
-//        {
-//            rowRead2.append( QString::number(argsB.pMat->at(i,j) ));
-//            rowRead2.append(" ");
-//        }
-//        rowRead2.append("\n");
-//    }
-
-//    qDebug() << rowRead2;
+    matrixC->copyToFile(fileC);
 
 
     return 0;

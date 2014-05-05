@@ -41,6 +41,7 @@ Matrix<float>* matrixC = new Matrix<float>(0,0);
 pthread_mutex_t mutexCalc = PTHREAD_MUTEX_INITIALIZER;
 ////////////////////////////////////////////////
 
+//Fills a matrix from a file
 void *createMatrix(void *args)
 {
     matrix_args* matArgs;
@@ -51,6 +52,7 @@ void *createMatrix(void *args)
     pthread_exit(NULL);
 }
 
+//Prepares matrix C, the product, with the correct number of rows and columns
 void *prepareProduct(void *args)
 {
     try
@@ -70,6 +72,7 @@ void *prepareProduct(void *args)
     pthread_exit(NULL);
 }
 
+//Calculates a specififed element in matrix C
 void *calculateProductElement(void *args)
 {
     calc_args* matArgs;

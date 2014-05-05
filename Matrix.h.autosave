@@ -29,13 +29,14 @@ public:
     void makeMatrix(QString fileName);
     void changeDimensions(int column, int row);
     void copyToFile(QString fileName);
+    //void makeEmptyMatrix(int column, int row);
 };
 
 //////////////////////////////
 //PRIVATE MEMBER FUNCTIONS
 /////////////////////////////
 
-//checks if a matrix is valid i.e., all its rows are the same size
+//checks if a matrix is valid
 template <typename T>
 bool Matrix<T>::checkValidMatrix()
 {
