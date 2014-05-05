@@ -17,8 +17,15 @@ public:
     void raise() const {qDebug() << "Exception: "; throw *this; }
 };
 
+class argError : public QtConcurrent::Exception
+{
+public:
+    void raise() const {qDebug() << "Exception: "; throw *this; }
+};
+
 invalidMatrix invMat;   //Exceptions for invalid matrix
 fileError badFile;      //Exceptions for unable to open file
+argError badArgNum;     //Exceptions for incorrect number of arguments
 /*
 class nonExistentDir : public QtConcurrent::Exception
 {

@@ -12,9 +12,9 @@
 template <typename T>
 class Matrix{
 private:
-    QVector<QVector<T> > col;
-    int row_size;
-    int col_size;
+    QVector<QVector<T> > rowVec;
+    int row_num;
+    int col_num;
 
     bool checkValidMatrix();
 
@@ -22,11 +22,13 @@ public:
     Matrix();
     Matrix(int column = 0, int row = 0);
     T at(int column, int row);
-    int getRowSize();
-    int getColSize();
+    int getRowNum();
+    int getColNum();
     void replaceVal(int column, int row, T newVal);
 
     void makeMatrix(QString fileName);
+    void changeDimensions(int column, int row);
+    void copyToFile(QString fileName);
     //void makeEmptyMatrix(int column, int row);
 };
 
@@ -36,11 +38,11 @@ public:
 template <typename T>
 bool Matrix<T>::checkValidMatrix()
 {
-    this->col_size = this->col.size();
+    this->col_num = this->rowVec.size();
 
-    for(int i = 0; i < getColSize()-1; i++)
+    for(int i = 0; i < getColNum()-1; i++)
     {
-        if(this->col.at(i).size() != this->col.at(i+1).size())
+        if(this->rowVec.at(i).size() != this->rowVec.at(i+1).size())
         {
             return false;
         }
@@ -54,8 +56,8 @@ bool Matrix<T>::checkValidMatrix()
 template <typename T>
 Matrix<T>::Matrix()
 {
-    row_size = 0;
-    col_size = 0;
+    row_num = 0;
+    col_num = 0;
 }
 
 template <typename T>
@@ -68,40 +70,40 @@ Matrix<T>::Matrix(int column, int row)
         {
             newRow.append(0);
         }
-        this->col.append(newRow);
+        this->rowVec.append(newRow);
     }
-    row_size = row;
-    col_size = column;
+    row_num = row;
+    col_num = column;
 }
 
 //Access function
 template <typename T>
 T Matrix<T>::at(int column, int row)
 {
-    return this->col.at(column).at(row);
+    return this->rowVec.at(row).at(column);
 }
 
 //returns # of columns
 template <typename T>
-int Matrix<T>::getColSize()
+int Matrix<T>::getColNum()
 {
-    return col_size;
+    return col_num;
 }
 
 //returns # of rows
 template <typename T>
-int Matrix<T>::getRowSize()
+int Matrix<T>::getRowNum()
 {
-    return row_size;
+    return row_num;
 }
 
 //replaces a value in the matrix
 template <typename T>
 void Matrix<T>::replaceVal(int column, int row, T newVal)
 {
-    QVector<T> newColumn = this->col.at(column);
-    newColumn.replace(row, newVal);
-    this->col.replace(column,newColumn);
+    QVector<T> newRow = this->rowVec.at(row);
+    newRow.replace(column, newVal);
+    this->rowVec.replace(row,newRow);
 }
 
 //creates a matrix from a file
@@ -135,7 +137,7 @@ void Matrix<T>::makeMatrix(QString fileName)
             item = (T)item;
             row.append(item);
         }
-        this->col.append(row);
+        this->rowVec.append(row);
 
     }
     input.close();
@@ -152,12 +154,72 @@ void Matrix<T>::makeMatrix(QString fileName)
         qFatal("Bad matrix.");
     }
 
-    this->row_size = this->col.at(0).size();
+    this->col_num = this->rowVec.at(0).size();
+    this->row_num = this->rowVec.size();
 }
 
-//void Matrix<T>::makeEmptyMatrix(int column, int row)
-//{
+template <typename T>
+void Matrix<T>::changeDimensions(int column, int row)
+{
+    this->rowVec.clear();
+    for(int i = 0; i < row; i++)
+    {
+        QVector<T> newRow;
+        for(int j = 0; j < column; j++)
+        {
+            newRow.append(0);
+        }
+        this->rowVec.append(newRow);
+    }
+    row_num = row;
+    col_num = column;
+}
 
-//}
+template <typename T>
+void Matrix<T>::copyToFile(QString fileName)
+{
+    QFile output(fileName);
+    try{
+        if(!output.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
+            badFile.raise();
+        }
+    }
+    catch(fileError &badFile)
+    {
+        qFatal("Could not open file.");
+    }
+
+
+    QTextStream stream(&output);
+
+
+    QString out;
+
+    for(int i = 0; i < this->getRowNum(); i++)
+    {
+        for(int j = 0; j < this->getColNum(); j++)
+        {
+            float num = this->at(j,i);
+            QString numString = QString::number(num,'f',4);
+
+            out.append(numString);
+            out.append(" ");
+        }
+        out.append("\n");
+    }
+
+    stream << out;
+
+    /*
+    QList<Birthdays*>::iterator i;
+    for(i = bday_list->begin(); i < bday_list->end(); i++)
+    {
+        Birthdays* current = *i;
+        stream << current->getName() << "\t" << current->getDate().toString("yyyy-MM-dd") << endl;
+    }*/
+
+}
+
 
 #endif // MATRIX_H
